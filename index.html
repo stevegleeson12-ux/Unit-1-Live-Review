@@ -1,4 +1,112 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unit 1 Live Review</title>
-<style>body{font-family:Arial,sans-serif;background:#111827;color:#fff;text-align:center;padding:40px}h1{font-size:48px}p{font-size:22px}.card{max-width:700px;margin:30px auto;padding:30px;background:#1f2937;border-radius:18px}</style></head>
-<body><div class="card"><h1>Unit 1 Live Review</h1><p>Your game is being prepared.</p><p>Return here shortly for the classroom join screen.</p></div></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unit 1 Live Review</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#090d1d;color:white}.wrap{max-width:950px;margin:auto;padding:25px}.card{background:#151b35;border:1px solid #30395e;border-radius:20px;padding:28px;box-shadow:0 12px 40px #0008}h1{font-size:clamp(32px,6vw,58px);margin:0 0 10px}.sub{color:#aeb8db}button,input{font:inherit;border-radius:12px;padding:14px}button{border:0;font-weight:bold;cursor:pointer}.primary{background:#6c5ce7;color:white}.green{background:#19c99a;color:#061a15}.gray{background:#30395e;color:white}input{width:100%;background:#0c1126;color:white;border:1px solid #445077;margin:6px 0 12px;box-sizing:border-box}.row{display:grid;grid-template-columns:1fr 1fr;gap:20px}.hidden{display:none}.code{font-size:60px;text-align:center;letter-spacing:10px;color:#68f0c7;font-weight:900}.status,.player,.leader{background:#202849;padding:12px;border-radius:10px;margin:10px 0}.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.player{display:flex;justify-content:space-between}.question{font-size:30px;line-height:1.25;margin:25px 0}.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ans{background:#242d52;color:white;min-height:95px;text-align:left;border:2px solid #38436c}.timer{font-size:32px;color:#68f0c7;font-weight:bold}.leader{display:flex;justify-content:space-between}@media(max-width:700px){.row,.answers{grid-template-columns:1fr}.code{font-size:42px}}
+</style>
+</head>
+<body><div class="wrap">
+<div id="home" class="card">
+<h1>🏛️ Unit 1 Live Review</h1><p class="sub">Kahoot style multiplayer review for Foundations of American Democracy</p>
+<div class="row"><div><h2>Teacher</h2><p class="sub">Create a room and project this screen.</p><button class="primary" onclick="host()">Create Game</button></div>
+<div><h2>Student</h2><p class="sub">Enter the teacher's code.</p><input id="joinCode" maxlength="6" placeholder="6 character code"><input id="studentName" maxlength="20" placeholder="Your name"><button class="green" onclick="join()">Join Game</button></div></div>
+<div id="homeStatus" class="status">Internet connection required.</div></div>
+
+<div id="host" class="card hidden"><h1>Teacher Game</h1><p class="sub">Students enter this code:</p><div class="code" id="roomCode"></div><div id="hostStatus" class="status">Starting room...</div><h2>Players: <span id="playerCount">0</span></h2><div id="players" class="players"></div><button id="startBtn" class="primary" onclick="startQ()" disabled>Start Game</button></div>
+
+<div id="hostQ" class="card hidden"><div class="sub" id="cat"></div><div class="timer" id="htimer">20</div><div class="question" id="hq"></div><div id="ha" class="players"></div><div id="hstatus" class="status"></div></div>
+
+<div id="results" class="card hidden"><h1>Results</h1><div id="correct" class="question"></div><div id="board"></div><button class="primary" onclick="nextQ()">Next Question</button></div>
+
+<div id="student" class="card hidden"><h1>You're in!</h1><div id="ss" class="sub">Waiting for the teacher...</div><div id="sqwrap" class="hidden"><div class="timer" id="stimer">20</div><div id="sq" class="question"></div><div id="answers" class="answers"></div><div id="feedback" class="question"></div></div></div>
+</div>
+
+<script>
+const Q=[
+["Constitutional Principles","Which situation best demonstrates separation of powers?",["Congress writes a law while the executive branch enforces it","States share power with the federal government","Voters elect a senator","A court protects free speech"],0],
+["Constitutional Principles","Citizens vote for representatives who make decisions on their behalf. Which idea does this demonstrate?",["Popular sovereignty","Judicial review","Federalism","Limited government"],0],
+["Constitutional Principles","Congress passes a law and the president vetoes it. Congress overrides the veto. What idea is illustrated?",["Federalism","Checks and balances","Popular sovereignty","Individual rights"],1],
+["Constitutional Principles","A government official is prosecuted for breaking the law just like any other citizen. Which principle applies?",["Limited government","Federalism","Popular sovereignty","Checks and balances"],0],
+["Constitutional Principles","Which example best shows individual rights limiting government power?",["A newspaper criticizes a government official","Congress creates a budget","A governor signs a law","The Senate confirms a judge"],0],
+["Federalism","Which example best demonstrates federalism?",["Federal and state governments both have responsibilities for transportation","The president vetoes a bill","The Supreme Court hears a case","Congress holds a hearing"],0],
+["Federalism","Which is most likely a reserved power of a state?",["Creating local governments","Declaring war","Coining money","Making treaties"],0],
+["Federalism","Which power is shared by federal and state governments?",["Foreign policy","Collecting taxes","Declaring war","Coining money"],1],
+["Federalism","Which power belongs to the federal government?",["Declaring war","Running a local election","Creating a city ordinance","Managing a county park"],0],
+["Powers & Constitution","Congress uses a power not specifically listed but connected to an enumerated power. Which clause is most relevant?",["Necessary and Proper Clause","Supremacy Clause","Establishment Clause","Full Faith and Credit Clause"],0],
+["Powers & Constitution","Someone argues Congress should use only powers specifically written in the Constitution. What approach is this?",["Loose construction","Strict construction","Judicial review","Federalism"],1],
+["Powers & Constitution","McCulloch v. Maryland is most closely associated with which idea?",["Necessary and Proper Clause and implied powers","Freedom of the press","Presidential succession","State control of treaties"],0],
+["Rights & Natural Rights","John Locke argued that government exists to protect which natural rights?",["Life, liberty, and property","Speech, religion, and assembly","Voting, taxes, and jury service","Education, housing, and health care"],0],
+["Rights & Natural Rights","A newspaper publishes criticism of a government official. Which protection is most directly involved?",["First Amendment freedom of the press","Second Amendment","Fourth Amendment","Tenth Amendment"],0],
+["Rights & Natural Rights","A state punishes someone for burning a flag as political expression. Which case is most relevant?",["Texas v. Johnson","McCulloch v. Maryland","Marbury v. Madison","Gibbons v. Ogden"],0],
+["Congress & Lawmaking","Why are bills often sent to committees?",["Committees allow Congress to study and revise proposals","Committees replace elections","Committees decide Supreme Court cases","Committees ratify amendments"],0],
+["Congress & Lawmaking","Congress wants to pass a bill despite a presidential veto. What is required?",["A two thirds vote in both chambers","A simple majority in the House","A simple majority in the Senate","Supreme Court approval"],0],
+["Congress & Lawmaking","The Senate is tied 50 to 50. Who normally casts the deciding vote?",["Speaker of the House","Vice President","Chief Justice","President pro tempore"],1],
+["Congress & Lawmaking","What procedure can the Senate use to end debate and move toward a vote?",["Cloture","Judicial review","Impeachment","Ratification"],0],
+["Big Picture","Which action most clearly demonstrates popular sovereignty?",["Citizens voting to choose representatives","A judge interpreting a statute","A president issuing an executive order","Congress holding a hearing"],0]
+];
+
+let peer,conn,room,players={},qi=-1,timer,timeLeft=20;
+
+function show(id){document.querySelectorAll(".card").forEach(x=>x.classList.add("hidden"));document.getElementById(id).classList.remove("hidden")}
+function code(){return Math.random().toString(36).slice(2,8).toUpperCase()}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+
+function host(){
+show("host");room=code();document.getElementById("roomCode").textContent=room;
+peer=new Peer("unit1-"+room);peer.on("open",()=>document.getElementById("hostStatus").textContent="Room is live. Students can join.");
+peer.on("connection",c=>{c.on("open",()=>{c.on("data",d=>hostData(c,d));c.on("close",()=>{delete players[c.peer];renderPlayers()})})});
+}
+function hostData(c,d){
+if(d.type==="join"){players[c.peer]={name:d.name,score:0,c:c};c.send({type:"joined"});renderPlayers()}
+if(d.type==="answer"){players[c.peer].answer=d.answer;renderPlayers();if(Object.values(players).every(p=>p.answer!==undefined))finish()}
+}
+function renderPlayers(){
+let v=Object.values(players);document.getElementById("playerCount").textContent=v.length;
+document.getElementById("players").innerHTML=v.map(p=>'<div class="player">'+esc(p.name)+"<b>"+(p.answer===undefined?"✓":"✓")+"</b></div>").join("");
+document.getElementById("startBtn").disabled=v.length===0;
+}
+function startQ(){
+qi++;if(qi>=Q.length){end();return}let q=Q[qi];timeLeft=20;show("hostQ");
+document.getElementById("cat").textContent=q[0];document.getElementById("hq").textContent=q[1];
+Object.values(players).forEach(p=>{delete p.answer;p.c.send({type:"question",question:q[1],answers:q[2]})});
+renderAnswers();clearInterval(timer);document.getElementById("htimer").textContent=20;
+timer=setInterval(()=>{timeLeft--;document.getElementById("htimer").textContent=timeLeft;if(timeLeft<=0){clearInterval(timer);finish()}},1000)
+}
+function renderAnswers(){
+let v=Object.values(players);document.getElementById("hstatus").textContent=v.filter(p=>p.answer!==undefined).length+" of "+v.length+" answered.";
+document.getElementById("ha").innerHTML=v.map(p=>'<div class="player">'+esc(p.name)+"<b>"+(p.answer===undefined?"…":"✓")+"</b></div>").join("");
+}
+function finish(){
+clearInterval(timer);let q=Q[qi];Object.values(players).forEach(p=>{let ok=p.answer===q[3];if(ok)p.score+=100+Math.max(0,timeLeft)*10;p.c.send({type:"result",ok:ok,score:p.score})});
+document.getElementById("correct").textContent="Correct answer: "+q[2][q[3]];board();show("results")
+}
+function board(){
+let v=Object.values(players).sort((a,b)=>b.score-a.score);document.getElementById("board").innerHTML=v.map((p,i)=>'<div class="leader"><span>'+(i+1)+". "+esc(p.name)+'</span><b>'+p.score+"</b></div>").join("")
+}
+function nextQ(){if(qi+1>=Q.length){end();return}startQ()}
+function end(){clearInterval(timer);document.getElementById("correct").textContent="Game complete!";board();show("results");document.querySelector("#results button").onclick=()=>location.reload()}
+
+function join(){
+room=document.getElementById("joinCode").value.trim().toUpperCase();let name=document.getElementById("studentName").value.trim()||"Student";
+if(room.length!==6){document.getElementById("homeStatus").textContent="Enter the 6 character code.";return}
+show("student");peer=new Peer();peer.on("open",()=>{conn=peer.connect("unit1-"+room);conn.on("open",()=>conn.send({type:"join",name:name}));conn.on("data",studentData)});
+peer.on("error",()=>document.getElementById("ss").textContent="Could not connect. Check the code.")
+}
+function studentData(d){
+if(d.type==="joined")document.getElementById("ss").textContent="Connected! Waiting for the next question.";
+if(d.type==="question"){showQuestion(d)}
+if(d.type==="result"){clearInterval(timer);document.getElementById("feedback").textContent=d.ok?"✓ Correct! Score: "+d.score:"✗ Incorrect. Score: "+d.score;document.querySelectorAll(".ans").forEach(b=>b.disabled=true)}
+}
+function showQuestion(d){
+document.getElementById("sqwrap").classList.remove("hidden");document.getElementById("sq").textContent=d.question;document.getElementById("feedback").textContent="";
+let a=document.getElementById("answers");a.innerHTML="";
+d.answers.forEach((x,i)=>{let b=document.createElement("button");b.className="ans";b.textContent=x;b.onclick=()=>answer(i);a.appendChild(b)});
+timeLeft=20;document.getElementById("stimer").textContent=20;clearInterval(timer);
+timer=setInterval(()=>{timeLeft--;document.getElementById("stimer").textContent=timeLeft;if(timeLeft<=0){clearInterval(timer);disable()}},1000)
+}
+function answer(i){conn.send({type:"answer",answer:i});disable();document.getElementById("ss").textContent="Answer submitted!"}
+function disable(){document.querySelectorAll(".ans").forEach(b=>b.disabled=true)}
+</script></body></html>
